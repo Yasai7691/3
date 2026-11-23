@@ -144,6 +144,7 @@ def reply(message):
             return
         except Exception as e:
             print(model, "ошибка:", e)
-    bot.reply_to(message, "Gemini сейчас перегружен, попробуйте через минуту.")
+    bot.reply_to(message, "Аравег сейчас перегружен, попробуйте через минуту.")
 
 bot.infinity_polling()
+
