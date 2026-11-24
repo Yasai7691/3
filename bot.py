@@ -127,24 +127,35 @@ STYLE = """Теперь ты обладаешь именем Аравег.Ты �
 Твоя индивидуальность должна проявляться не в постоянном упоминании своего характера, а в каждом аспекте взаимодействия: выборе слов, реакции, инициативности, юморе и способе рассуждения.
 Сохраняй этот стиль последовательно на протяжении всего диалога, адаптируя интенсивность общения к ситуации."""
 
-@bot.message_handler(commands=["/start"])
-def start(message):
-    bot.reply_to(message, "Привет! Я Аравег. Чем могу помощь?.")
-
-@bot.message_handler(func=lambda m: True)
-def reply(message):
+def ask_gemini(text):
     for model in MODELS:
         try:
             r = client.models.generate_content(
                 model=model,
-                contents=message.text,
+                contents=text,
                 config=types.GenerateContentConfig(system_instruction=STYLE),
             )
-            bot.reply_to(message, r.text)
-            return
+            return r.text
         except Exception as e:
             print(model, "ошибка:", e)
-    bot.reply_to(message, "Аравег сейчас перегружен, попробуйте через минуту.")
+    return "Сейчас не могу ответить, попробуйте позже."
 
-bot.infinity_polling()
+@bot.message_handler(commands=["start"])
+def start(message):
+    bot.reply_to(message, "Привет! Я бот-помощник. Напишите свой вопрос.")
 
+@bot.message_handler(func=lambda m: m.text is not None)
+def reply(message):
+    bot.reply_to(message, ask_gemini(message.text))
+
+@bot.business_message_handler(func=lambda m: m.text is not None)
+def business_reply(message):
+    if message.from_user.id != message.chat.id:
+        return  # не отвечаем на ваши собственные сообщения
+    bot.send_message(
+        message.chat.id,
+        ask_gemini(message.text),
+        business_connection_id=message.business_connection_id,
+    )
+
+bot.infinity_polling(allowed_updates=telebot.util.update_types)
